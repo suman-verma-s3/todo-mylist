@@ -3,18 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Todo;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class TodoController extends Controller
 {
     public function index()
     {
-        /** @var User $user */
-        $user = Auth::user();
-
-        $todos = $user->todos()
+        $todos = Todo::where('user_id', auth()->id())
             ->latest()
             ->get();
 
@@ -28,14 +23,15 @@ class TodoController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+        $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
         ]);
 
-        Auth::user()->todos()->create([
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
+        Todo::create([
+            'user_id' => auth()->id(),
+            'title' => $request->title,
+            'description' => $request->description,
             'status' => 'pending',
         ]);
 
@@ -46,29 +42,33 @@ class TodoController extends Controller
 
     public function show(Todo $todo)
     {
-        $this->checkOwnership($todo);
+        $this->authorizeTodo($todo);
 
         return view('todos.show', compact('todo'));
     }
 
     public function edit(Todo $todo)
     {
-        $this->checkOwnership($todo);
+        $this->authorizeTodo($todo);
 
         return view('todos.edit', compact('todo'));
     }
 
     public function update(Request $request, Todo $todo)
     {
-        $this->checkOwnership($todo);
+        $this->authorizeTodo($todo);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:pending,completed',
+        $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'status' => ['required', 'in:pending,completed'],
         ]);
 
-        $todo->update($validated);
+        $todo->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'status' => $request->status,
+        ]);
 
         return redirect()
             ->route('todos.index')
@@ -77,7 +77,7 @@ class TodoController extends Controller
 
     public function destroy(Todo $todo)
     {
-        $this->checkOwnership($todo);
+        $this->authorizeTodo($todo);
 
         $todo->delete();
 
@@ -86,11 +86,8 @@ class TodoController extends Controller
             ->with('success', 'Todo deleted successfully.');
     }
 
-    private function checkOwnership(Todo $todo)
+    private function authorizeTodo(Todo $todo)
     {
-        abort_unless(
-            $todo->user_id === Auth::id(),
-            403
-        );
+        abort_if($todo->user_id !== auth()->id(), 403);
     }
 }

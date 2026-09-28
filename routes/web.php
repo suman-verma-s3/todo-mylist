@@ -3,7 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\TodoController;
+use App\Http\Controllers\Admin\TodoController as AdminTodoController;
+use App\Http\Controllers\TodoController as UserTodoController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -26,7 +27,9 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 
 /*
@@ -51,7 +54,7 @@ Route::middleware('auth')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Admin
+| ADMIN ROUTES
 |--------------------------------------------------------------------------
 */
 
@@ -72,53 +75,120 @@ Route::middleware(['auth', 'role:admin'])
 
         /*
         |--------------------------------------------------------------------------
-        | User Management
+        | Admin User Management
         |--------------------------------------------------------------------------
         */
 
         Route::resource('users', UserController::class)
-            ->only(['index', 'create', 'store']);
+            ->only([
+                'index',
+                'create',
+                'store',
+            ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Todo Management
+        |--------------------------------------------------------------------------
+        */
+
+        Route::resource('todos', AdminTodoController::class)
+            ->only([
+                'index',
+                'create',
+                'store',
+                'show',
+                'edit',
+                'update',
+                'destroy',
+            ]);
 
     });
 
 
 /*
 |--------------------------------------------------------------------------
-| Todo Management
+| USER TODO ROUTES
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'permission:todo.view'])->group(function () {
+Route::middleware([
+    'auth',
+    'permission:todo.view'
+])->group(function () {
 
-    Route::get('/my-todos', [TodoController::class, 'index'])
+    /*
+    |--------------------------------------------------------------------------
+    | My Tasks
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/my-todos', [UserTodoController::class, 'index'])
         ->name('todos.index');
 
 
-    Route::get('/my-todos/create', [TodoController::class, 'create'])
+    /*
+    |--------------------------------------------------------------------------
+    | Create Task
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/my-todos/create', [UserTodoController::class, 'create'])
         ->middleware('permission:todo.create')
         ->name('todos.create');
 
 
-    Route::post('/my-todos', [TodoController::class, 'store'])
+    /*
+    |--------------------------------------------------------------------------
+    | Store Task
+    |--------------------------------------------------------------------------
+    */
+
+    Route::post('/my-todos', [UserTodoController::class, 'store'])
         ->middleware('permission:todo.create')
         ->name('todos.store');
 
 
-    Route::get('/my-todos/{todo}', [TodoController::class, 'show'])
+    /*
+    |--------------------------------------------------------------------------
+    | View Task
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/my-todos/{todo}', [UserTodoController::class, 'show'])
         ->name('todos.show');
 
 
-    Route::get('/my-todos/{todo}/edit', [TodoController::class, 'edit'])
+    /*
+    |--------------------------------------------------------------------------
+    | Edit Task
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/my-todos/{todo}/edit', [UserTodoController::class, 'edit'])
         ->middleware('permission:todo.edit')
         ->name('todos.edit');
 
 
-    Route::put('/my-todos/{todo}', [TodoController::class, 'update'])
+    /*
+    |--------------------------------------------------------------------------
+    | Update Task
+    |--------------------------------------------------------------------------
+    */
+
+    Route::put('/my-todos/{todo}', [UserTodoController::class, 'update'])
         ->middleware('permission:todo.edit')
         ->name('todos.update');
 
 
-    Route::delete('/my-todos/{todo}', [TodoController::class, 'destroy'])
+    /*
+    |--------------------------------------------------------------------------
+    | Delete Task
+    |--------------------------------------------------------------------------
+    */
+
+    Route::delete('/my-todos/{todo}', [UserTodoController::class, 'destroy'])
         ->middleware('permission:todo.delete')
         ->name('todos.destroy');
 
@@ -131,4 +201,4 @@ Route::middleware(['auth', 'permission:todo.view'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
